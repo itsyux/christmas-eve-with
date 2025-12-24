@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Snow Reveal</title>
+<style>
+html,body{
+  margin:0;
+  height:100%;
+  background:linear-gradient(#0b1d3a,#122d55);
+  overflow:hidden;
+  font-family:"PingFang SC","Helvetica Neue",Arial;
+}
+
+#text{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:40px;
+  color:#fff;
+  z-index:0;
+}
+
+#text h1{font-size:36px;margin-bottom:18px;}
+#text p{font-size:22px;max-width:620px;line-height:1.8;}
+
+canvas{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  touch-action:none;
+}
+</style>
+</head>
+<body>
+
+<div id="text">
+  <div>
+    <h1>🎄 平安夜快乐王宇轩^-^</h1>
+    <p id="msg"></p>
+  </div>
+</div>
+
+<canvas id="snow"></canvas>
+
+<script>
+/* ========= 文案 ========= */
+const texts = [
+  "祝你永远不死",
+  "thank u my day 1 brother",
+  "祝你永远不死",
+  "没了",
+  "真没了。"
+];
+
+let index = 0;
+let revealed = false;
+const msg = document.getElementById("msg");
+msg.innerText = texts[index];
+
+/* ========= Canvas ========= */
+const c = document.getElementById("snow");
+const ctx = c.getContext("2d");
+
+function resize(){
+  c.width = innerWidth;
+  c.height = innerHeight;
+  drawSnowLayer();
+}
+onresize = resize;
+resize();
+
+/* ========= 高质感雪面 ========= */
+function drawSnowLayer(){
+  ctx.globalCompositeOperation = "source-over";
+
+  const grad = ctx.createLinearGradient(0,0,0,c.height);
+  grad.addColorStop(0,"#f8fbff");
+  grad.addColorStop(1,"#dbe4f0");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,c.width,c.height);
+
+  // 雪晶颗粒
+  for(let i=0;i<140000;i++){
+    const x = Math.random()*c.width;
+    const y = Math.random()*c.height;
+    const a = Math.random()*0.06;
+    ctx.fillStyle = `rgba(255,255,255,${a})`;
+    ctx.fillRect(x,y,1,1);
+  }
+}
+
+/* ========= 擦雪 ========= */
+function erase(x,y){
+  if(revealed) return;
+
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.beginPath();
+  ctx.arc(x,y,45,0,Math.PI*2);
+  ctx.fill();
+
+  if(getClearRatio() > 0.25){
+    revealed = true;
+    meltRemainingSnow();
+  }
+}
+
+/* ========= 擦除比例 ========= */
+function getClearRatio(){
+  const data = ctx.getImageData(0,0,c.width,c.height).data;
+  let cleared = 0;
+  for(let i=3;i<data.length;i+=4){
+    if(data[i] === 0) cleared++;
+  }
+  return cleared / (c.width * c.height);
+}
+
+/* ========= 剩余雪消融 ========= */
+function meltRemainingSnow(){
+  let t = 0;
+  const timer = setInterval(()=>{
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "rgba(0,0,0,0.04)";
+    ctx.fillRect(0,0,c.width,c.height);
+    t++;
+    if(t > 40) clearInterval(timer);
+  },30);
+}
+
+/* ========= 交互 ========= */
+let down = false;
+c.onmousedown = ()=> down = true;
+c.onmouseup = ()=> down = false;
+c.onmousemove = e => down && erase(e.clientX,e.clientY);
+
+c.ontouchmove = e => {
+  const t = e.touches[0];
+  erase(t.clientX,t.clientY);
+};
+
+c.onclick = ()=>{
+  if(revealed){
+    index = (index+1) % texts.length;
+    msg.innerText = texts[index];
+    revealed = false;
+    drawSnowLayer();
+  }
+};
+</script>
+</body>
+</html>
